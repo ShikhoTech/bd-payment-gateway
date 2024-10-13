@@ -13,10 +13,10 @@ func TestAgreement(t *testing.T) {
 	appKey := os.Getenv("BKASH_APP_KEY")
 	appSecret := os.Getenv("BKASH_APP_SECRET")
 
-	bkashService := bkash.GetBkash(username, password, appKey, appSecret)
+	bkashService := bkash.GetBkash(username, password, appKey, appSecret, false)
 	paymentService := bkash.BkashTokenizedCheckoutService(bkashService)
 
-	token, err := paymentService.GrantToken(false)
+	token, err := paymentService.GrantToken()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -34,7 +34,7 @@ func TestAgreement(t *testing.T) {
 			Currency:       "BDT",
 			Intent:         "Shikho Subscription",
 		}
-		resp, err := paymentService.CreateAgreement(req, token, false)
+		resp, err := paymentService.CreateAgreement(req, token)
 
 		if err != nil {
 			t.Error(err.Error())
@@ -53,7 +53,7 @@ func TestAgreement(t *testing.T) {
 		req := &models.ExecuteAgreementRequest{
 			PaymentID: createAgreementResponse.PaymentID,
 		}
-		resp, err := paymentService.ExecuteAgreement(req, token, false)
+		resp, err := paymentService.ExecuteAgreement(req, token)
 
 		if err != nil {
 			t.Error(err.Error())
@@ -80,7 +80,7 @@ func TestAgreement(t *testing.T) {
 			MerchantInvoiceNumber:   "Inv0124",
 			MerchantAssociationInfo: "MI05MID54RF09123456One",
 		}
-		resp, err := paymentService.CreatePayment(req, token, false)
+		resp, err := paymentService.CreatePayment(req, token)
 
 		if err != nil {
 			t.Error(err.Error())
@@ -98,7 +98,7 @@ func TestAgreement(t *testing.T) {
 		req := &models.ExecutePaymentRequest{
 			PaymentID: createPaymentResponse.PaymentID,
 		}
-		resp, err := paymentService.ExecutePayment(req, token, false)
+		resp, err := paymentService.ExecutePayment(req, token)
 
 		if err != nil {
 			t.Error(err.Error())

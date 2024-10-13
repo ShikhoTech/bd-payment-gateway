@@ -9,6 +9,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	goCache "github.com/patrickmn/go-cache"
 	"github.com/sh0umik/bd-payment-gateway/bkash/models"
 	"io/ioutil"
 	"net/http"
@@ -40,9 +41,11 @@ type Bkash struct {
 	AppSecret string
 
 	isLiveStore bool
+	cache       *goCache.Cache
 }
 
 func GetBkash(username, password, appKey, appSecret string, isLiveStore bool) BkashTokenizedCheckoutService {
+	c := goCache.New(goCache.NoExpiration, -1)
 	return &Bkash{
 		Username:  username,
 		Password:  password,
@@ -50,6 +53,7 @@ func GetBkash(username, password, appKey, appSecret string, isLiveStore bool) Bk
 		AppSecret: appSecret,
 
 		isLiveStore: isLiveStore,
+		cache:       c,
 	}
 }
 
@@ -617,24 +621,35 @@ func getMessageBytesToSign(msg *models.BkashIPNPayload) []byte {
 
 // IsMessageSignatureValid validates bkash IPN message signature. Returns true, nil if ok,
 // otherwise returns false, error
-func IsMessageSignatureValid(msg *models.BkashIPNPayload) error {
-	resp, err := http.Get(msg.SigningCertURL)
-	if err != nil {
-		return err
-	}
-	if resp.StatusCode != http.StatusOK {
-		return errors.New("unable to get certificate err: " + resp.Status)
-	}
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return err
+func (b *Bkash) IsMessageSignatureValid(msg *models.BkashIPNPayload) error {
+	var cert *x509.Certificate
+	if iFace, found := b.cache.Get(msg.SigningCertURL); found {
+		if crt, ok := iFace.(*x509.Certificate); ok {
+			cert = crt
+		}
 	}
 
-	p, _ := pem.Decode(body)
-	cert, err := x509.ParseCertificate(p.Bytes)
-	if err != nil {
-		return err
+	if cert == nil {
+		resp, err := http.Get(msg.SigningCertURL)
+		if err != nil {
+			return err
+		}
+		if resp.StatusCode != http.StatusOK {
+			return errors.New("unable to get certificate err: " + resp.Status)
+		}
+
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+
+		p, _ := pem.Decode(body)
+		cert, err = x509.ParseCertificate(p.Bytes)
+		if err != nil {
+			return err
+		}
+
+		b.cache.SetDefault(msg.SigningCertURL, cert)
 	}
 
 	base64DecodedSignature, err := base64.StdEncoding.DecodeString(msg.Signature)

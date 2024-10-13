@@ -13,10 +13,10 @@ func TestGrantToken(t *testing.T) {
 	appKey := os.Getenv("BKASH_APP_KEY")
 	appSecret := os.Getenv("BKASH_APP_SECRET")
 
-	bkashService := bkash.GetBkash(username, password, appKey, appSecret)
+	bkashService := bkash.GetBkash(username, password, appKey, appSecret, false)
 	paymentService := bkash.BkashTokenizedCheckoutService(bkashService)
 
-	token, err := paymentService.GrantToken(false)
+	token, err := paymentService.GrantToken()
 	if err != nil {
 		t.Error(err.Error())
 		t.Fail()
@@ -33,10 +33,10 @@ func TestBkashJourney(t *testing.T) {
 	appKey := os.Getenv("BKASH_APP_KEY")
 	appSecret := os.Getenv("BKASH_APP_SECRET")
 
-	bkashService := bkash.GetBkash(username, password, appKey, appSecret)
+	bkashService := bkash.GetBkash(username, password, appKey, appSecret, false)
 	paymentService := bkash.BkashTokenizedCheckoutService(bkashService)
 
-	token, err := paymentService.GrantToken(false)
+	token, err := paymentService.GrantToken()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -45,7 +45,7 @@ func TestBkashJourney(t *testing.T) {
 		t.Fatalf("StatusCode: %v, Status Message: %v\n", token.StatusCode, token.StatusMessage)
 	}
 
-	queryPaymentRes, err := paymentService.QueryPayment(&models.QueryPaymentRequest{PaymentID: "TR0001541629364022912"}, token, false)
+	queryPaymentRes, err := paymentService.QueryPayment(&models.QueryPaymentRequest{PaymentID: "TR0001541629364022912"}, token)
 	if err != nil {
 		t.Fatal(err)
 	}

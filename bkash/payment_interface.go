@@ -40,4 +40,6 @@ type BkashTokenizedCheckoutService interface {
 
 	// QueryPayment query payment by paymentID
 	QueryPayment(request *models.QueryPaymentRequest, token *models.Token) (*models.QueryPaymentResponse, error)
+
+	IsMessageSignatureValid(msg *models.BkashIPNPayload) error
 }
