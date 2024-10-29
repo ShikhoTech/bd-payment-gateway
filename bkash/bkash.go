@@ -61,10 +61,10 @@ func NewTokenizedCheckoutService(username, password, appKey, appSecret string, i
 	}
 }
 
-func (b *bkash) getToken() (*models.Token, error) {
+func (b *bkash) getToken() (token models.Token, err error) {
 	// Mandatory field validation
 	if b.AppKey == "" || b.AppSecret == "" || b.Username == "" || b.Password == "" {
-		return nil, emptyRequiredField
+		return token, emptyRequiredField
 	}
 
 	var data = make(map[string]string)
@@ -76,13 +76,13 @@ func (b *bkash) getToken() (*models.Token, error) {
 
 	jsonData, err := json.Marshal(data)
 	if err != nil {
-		return nil, err
+		return
 	}
 
 	client := &http.Client{}
 	r, err := http.NewRequest("POST", grantTokenURL, bytes.NewReader(jsonData))
 	if err != nil {
-		return nil, err
+		return
 	}
 
 	r.Header.Add("Content-Type", "application/json")
@@ -92,21 +92,23 @@ func (b *bkash) getToken() (*models.Token, error) {
 
 	response, err := client.Do(r)
 	if err != nil {
-		return nil, err
+		return
 	}
 
 	body, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		return nil, err
+		return
 	}
 
-	var resp models.Token
-	err = json.Unmarshal(body, &resp)
+	err = json.Unmarshal(body, &token)
 	if err != nil {
-		return nil, err
+		return
 	}
 
-	return &resp, nil
+	if token.StatusCode != "0000" {
+		return token, errors.New(fmt.Sprintf("token generation failed, status: %s, reason: %s", token.StatusCode, token.StatusMessage))
+	}
+	return
 }
 
 func (b *bkash) RefreshToken(token *models.Token) (*models.Token, error) {
