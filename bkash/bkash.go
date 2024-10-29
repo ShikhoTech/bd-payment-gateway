@@ -19,22 +19,25 @@ import (
 	"time"
 )
 
-const BKASH_SANDBOX_GATEWAY = "https://tokenized.sandbox.bka.sh/v1.2.0-beta"
-const BKASH_LIVE_GATEWAY = "https://tokenized.pay.bka.sh/v1.2.0-beta"
-const BKASH_GRANT_TOKEN_URI = "/tokenized/checkout/token/grant"
-const BKASH_REFRESH_TOKEN_URI = "/tokenized/checkout/token/refresh"
-const BKASH_CREATE_AGREEMENT_URI = "/tokenized/checkout/create"
-const BKASH_EXECUTE_AGREEMENT_URI = "/tokenized/checkout/execute"
-const BKASH_QUERY_AGREEMENT_URI = "/tokenized/checkout/agreement/status"
-const BKASH_CANCEL_AGREEMENT_URI = "/tokenized/checkout/agreement/cancel"
-const BKASH_CREATE_PAYMENT_URI = "/tokenized/checkout/create"
-const BKASH_EXECUTE_PAYMENT_URI = "/tokenized/checkout/execute"
-const BKASH_QUERY_PAYMENT_URI = "/tokenized/checkout/payment/status"
+const (
+	bkashSandboxGateway      = "https://tokenized.sandbox.bka.sh/v1.2.0-beta"
+	bkashLiveGateway         = "https://tokenized.pay.bka.sh/v1.2.0-beta"
+	bkashGrantTokenUri       = "/tokenized/checkout/token/grant"
+	bkashRefreshTokenUri     = "/tokenized/checkout/token/refresh"
+	bkashCreateAgreementUri  = "/tokenized/checkout/create"
+	bkashExecuteAgreementUri = "/tokenized/checkout/execute"
+	bkashQueryAgreementUri   = "/tokenized/checkout/agreement/status"
+	bkashCancelAgreementUri  = "/tokenized/checkout/agreement/cancel"
+	bkashCreatePaymentUri    = "/tokenized/checkout/create"
+	bkashExecutePaymentUri   = "/tokenized/checkout/execute"
+	bkashQueryPaymentUri     = "/tokenized/checkout/payment/status"
+	bkashRefundPaymentUri    = "/tokenized/checkout/payment/refund"
+)
 
-var EMPTY_REQUIRED_FIELD = errors.New("empty required field")
-var TIMEOUT_ERROR = errors.New("api request timeout")
+var emptyRequiredField = errors.New("empty required field")
+var timeoutError = errors.New("api request timeout")
 
-type Bkash struct {
+type bkash struct {
 	Username  string
 	Password  string
 	AppKey    string
@@ -42,11 +45,12 @@ type Bkash struct {
 
 	isLiveStore bool
 	cache       *goCache.Cache
+	token       *models.Token
 }
 
-func GetBkash(username, password, appKey, appSecret string, isLiveStore bool) BkashTokenizedCheckoutService {
+func NewTokenizedCheckoutService(username, password, appKey, appSecret string, isLiveStore bool) TokenizedCheckoutService {
 	c := goCache.New(goCache.NoExpiration, -1)
-	return &Bkash{
+	return &bkash{
 		Username:  username,
 		Password:  password,
 		AppKey:    appKey,
@@ -57,10 +61,10 @@ func GetBkash(username, password, appKey, appSecret string, isLiveStore bool) Bk
 	}
 }
 
-func (b *Bkash) GrantToken() (*models.Token, error) {
+func (b *bkash) getToken() (*models.Token, error) {
 	// Mandatory field validation
 	if b.AppKey == "" || b.AppSecret == "" || b.Username == "" || b.Password == "" {
-		return nil, EMPTY_REQUIRED_FIELD
+		return nil, emptyRequiredField
 	}
 
 	var data = make(map[string]string)
@@ -68,16 +72,7 @@ func (b *Bkash) GrantToken() (*models.Token, error) {
 	data["app_key"] = b.AppKey
 	data["app_secret"] = b.AppSecret
 
-	var storeUrl string
-	if b.isLiveStore {
-		storeUrl = BKASH_LIVE_GATEWAY
-	} else {
-		storeUrl = BKASH_SANDBOX_GATEWAY
-	}
-	u, _ := url.ParseRequestURI(storeUrl)
-	u.Path += BKASH_GRANT_TOKEN_URI
-
-	grantTokenURL := u.String()
+	grantTokenURL := b.uri(bkashGrantTokenUri)
 
 	jsonData, err := json.Marshal(data)
 	if err != nil {
@@ -114,10 +109,10 @@ func (b *Bkash) GrantToken() (*models.Token, error) {
 	return &resp, nil
 }
 
-func (b *Bkash) RefreshToken(token *models.Token) (*models.Token, error) {
+func (b *bkash) RefreshToken(token *models.Token) (*models.Token, error) {
 	// Mandatory field validation
 	if b.AppKey == "" || b.AppSecret == "" || token.RefreshToken == "" || b.Username == "" || b.Password == "" {
-		return nil, EMPTY_REQUIRED_FIELD
+		return nil, emptyRequiredField
 	}
 
 	var data = make(map[string]string)
@@ -126,16 +121,7 @@ func (b *Bkash) RefreshToken(token *models.Token) (*models.Token, error) {
 	data["app_secret"] = b.AppSecret
 	data["refresh_token"] = token.RefreshToken
 
-	var storeUrl string
-	if b.isLiveStore {
-		storeUrl = BKASH_LIVE_GATEWAY
-	} else {
-		storeUrl = BKASH_SANDBOX_GATEWAY
-	}
-	u, _ := url.ParseRequestURI(storeUrl)
-	u.Path += BKASH_REFRESH_TOKEN_URI
-
-	refreshTokenURL := u.String()
+	refreshTokenURL := b.uri(bkashRefreshTokenUri)
 
 	jsonData, err := json.Marshal(data)
 	if err != nil {
@@ -172,10 +158,15 @@ func (b *Bkash) RefreshToken(token *models.Token) (*models.Token, error) {
 	return &resp, nil
 }
 
-func (b *Bkash) CreateAgreement(request *models.CreateAgreementRequest, token *models.Token) (*models.CreateAgreementResponse, error) {
+func (b *bkash) CreateAgreement(request *models.CreateAgreementRequest) (*models.CreateAgreementResponse, error) {
 	// Mandatory field validation
-	if b.AppKey == "" || token.IdToken == "" || request.Mode == "" || request.CallbackUrl == "" {
-		return nil, EMPTY_REQUIRED_FIELD
+	if b.AppKey == "" || request.Mode == "" || request.CallbackUrl == "" {
+		return nil, emptyRequiredField
+	}
+
+	token, err := b.getToken()
+	if err != nil {
+		return nil, err
 	}
 
 	// Mode validation
@@ -183,17 +174,7 @@ func (b *Bkash) CreateAgreement(request *models.CreateAgreementRequest, token *m
 		return nil, errors.New("invalid mode value")
 	}
 
-	var storeUrl string
-	if b.isLiveStore {
-		storeUrl = BKASH_LIVE_GATEWAY
-	} else {
-		storeUrl = BKASH_SANDBOX_GATEWAY
-	}
-	u, _ := url.ParseRequestURI(storeUrl)
-	u.Path += BKASH_CREATE_AGREEMENT_URI
-	//u.RawQuery = data.Encode()
-
-	createAgreementURL := u.String()
+	createAgreementURL := b.uri(bkashCreateAgreementUri)
 
 	jsonData, err := json.Marshal(request)
 	if err != nil {
@@ -230,7 +211,7 @@ func (b *Bkash) CreateAgreement(request *models.CreateAgreementRequest, token *m
 	return &resp, nil
 }
 
-func (b *Bkash) CreateAgreementValidationListener(r *http.Request) (*models.CreateAgreementValidationResponse, error) {
+func (b *bkash) CreateAgreementValidationListener(r *http.Request) (*models.CreateAgreementValidationResponse, error) {
 	if r.Method != "POST" {
 		return nil, errors.New("method not allowed")
 	}
@@ -245,23 +226,18 @@ func (b *Bkash) CreateAgreementValidationListener(r *http.Request) (*models.Crea
 	return &agreementTValidationResponse, nil
 }
 
-func (b *Bkash) ExecuteAgreement(request *models.ExecuteAgreementRequest, token *models.Token) (*models.ExecuteAgreementResponse, error) {
+func (b *bkash) ExecuteAgreement(request *models.ExecuteAgreementRequest) (*models.ExecuteAgreementResponse, error) {
 	// Mandatory field validation
-	if b.AppKey == "" || token.IdToken == "" || request.PaymentID == "" {
-		return nil, EMPTY_REQUIRED_FIELD
+	if b.AppKey == "" || request.PaymentID == "" {
+		return nil, emptyRequiredField
 	}
 
-	var storeUrl string
-	if b.isLiveStore {
-		storeUrl = BKASH_LIVE_GATEWAY
-	} else {
-		storeUrl = BKASH_SANDBOX_GATEWAY
+	token, err := b.getToken()
+	if err != nil {
+		return nil, err
 	}
-	u, _ := url.ParseRequestURI(storeUrl)
-	u.Path += BKASH_EXECUTE_AGREEMENT_URI
-	//u.RawQuery = data.Encode()
 
-	executeAgreementURL := u.String()
+	executeAgreementURL := b.uri(bkashExecuteAgreementUri)
 
 	jsonData, err := json.Marshal(request)
 	if err != nil {
@@ -298,23 +274,18 @@ func (b *Bkash) ExecuteAgreement(request *models.ExecuteAgreementRequest, token 
 	return &resp, nil
 }
 
-func (b *Bkash) QueryAgreement(request *models.QueryAgreementRequest, token *models.Token) (*models.QueryAgreementResponse, error) {
+func (b *bkash) QueryAgreement(request *models.QueryAgreementRequest) (*models.QueryAgreementResponse, error) {
 	// Mandatory field validation
-	if b.AppKey == "" || token.IdToken == "" || request.AgreementID == "" {
-		return nil, EMPTY_REQUIRED_FIELD
+	if b.AppKey == "" || request.AgreementID == "" {
+		return nil, emptyRequiredField
 	}
 
-	var storeUrl string
-	if b.isLiveStore {
-		storeUrl = BKASH_LIVE_GATEWAY
-	} else {
-		storeUrl = BKASH_SANDBOX_GATEWAY
+	token, err := b.getToken()
+	if err != nil {
+		return nil, err
 	}
-	u, _ := url.ParseRequestURI(storeUrl)
-	u.Path += BKASH_QUERY_AGREEMENT_URI
-	//u.RawQuery = data.Encode()
 
-	queryAgreementURL := u.String()
+	queryAgreementURL := b.uri(bkashQueryAgreementUri)
 
 	jsonData, err := json.Marshal(request)
 	if err != nil {
@@ -351,23 +322,18 @@ func (b *Bkash) QueryAgreement(request *models.QueryAgreementRequest, token *mod
 	return &resp, nil
 }
 
-func (b *Bkash) CancelAgreement(request *models.CancelAgreementRequest, token *models.Token) (*models.CancelAgreementResponse, error) {
+func (b *bkash) CancelAgreement(request *models.CancelAgreementRequest) (*models.CancelAgreementResponse, error) {
 	// Mandatory field validation
-	if b.AppKey == "" || token.IdToken == "" || request.AgreementID == "" {
-		return nil, EMPTY_REQUIRED_FIELD
+	if b.AppKey == "" || request.AgreementID == "" {
+		return nil, emptyRequiredField
 	}
 
-	var storeUrl string
-	if b.isLiveStore {
-		storeUrl = BKASH_LIVE_GATEWAY
-	} else {
-		storeUrl = BKASH_SANDBOX_GATEWAY
+	token, err := b.getToken()
+	if err != nil {
+		return nil, err
 	}
-	u, _ := url.ParseRequestURI(storeUrl)
-	u.Path += BKASH_CANCEL_AGREEMENT_URI
-	//u.RawQuery = data.Encode()
 
-	cancelAgreementURL := u.String()
+	cancelAgreementURL := b.uri(bkashCancelAgreementUri)
 
 	jsonData, err := json.Marshal(request)
 	if err != nil {
@@ -404,27 +370,24 @@ func (b *Bkash) CancelAgreement(request *models.CancelAgreementRequest, token *m
 	return &resp, nil
 }
 
-func (b *Bkash) CreatePayment(request *models.CreatePaymentRequest, token *models.Token) (*models.CreatePaymentResponse, error) {
+func (b *bkash) CreatePayment(request *models.CreatePaymentRequest) (*models.CreatePaymentResponse, error) {
 	// Mandatory field validation
-	if b.AppKey == "" || token.IdToken == "" || request.Mode == "" || request.CallbackURL == "" {
-		return nil, EMPTY_REQUIRED_FIELD
+	if b.AppKey == "" || request.CallbackURL == "" {
+		return nil, emptyRequiredField
 	}
 
-	// Mode validation
-	if request.Mode != "0001" && request.Mode != "0011" {
-		return nil, errors.New("invalid mode value")
+	token, err := b.getToken()
+	if err != nil {
+		return nil, err
 	}
 
-	var storeUrl string
-	if b.isLiveStore {
-		storeUrl = BKASH_LIVE_GATEWAY
+	if request.AgreementID != "" {
+		request.Mode = "0001" // tokenized checkout mode
 	} else {
-		storeUrl = BKASH_SANDBOX_GATEWAY
+		request.Mode = "0011" // direct payment mode
 	}
-	u, _ := url.ParseRequestURI(storeUrl)
-	u.Path += BKASH_CREATE_PAYMENT_URI
 
-	createPaymentURL := u.String()
+	createPaymentURL := b.uri(bkashCreatePaymentUri)
 
 	jsonData, err := json.Marshal(request)
 	if err != nil {
@@ -458,25 +421,25 @@ func (b *Bkash) CreatePayment(request *models.CreatePaymentRequest, token *model
 		return nil, err
 	}
 
+	if resp.StatusCode != "0000" {
+		return nil, errors.New(fmt.Sprintf("payment initiation failed, status: %s, reason: %s", resp.StatusCode, resp.StatusMessage))
+	}
+
 	return &resp, nil
 }
 
-func (b *Bkash) ExecutePayment(request *models.ExecutePaymentRequest, token *models.Token) (*models.ExecutePaymentResponse, error) {
+func (b *bkash) ExecutePayment(request *models.ExecutePaymentRequest) (*models.ExecutePaymentResponse, error) {
 	// Mandatory field validation
-	if b.AppKey == "" || token.IdToken == "" || request.PaymentID == "" {
-		return nil, EMPTY_REQUIRED_FIELD
+	if b.AppKey == "" || request.PaymentID == "" {
+		return nil, emptyRequiredField
 	}
 
-	var storeUrl string
-	if b.isLiveStore {
-		storeUrl = BKASH_LIVE_GATEWAY
-	} else {
-		storeUrl = BKASH_SANDBOX_GATEWAY
+	token, err := b.getToken()
+	if err != nil {
+		return nil, err
 	}
-	u, _ := url.ParseRequestURI(storeUrl)
-	u.Path += BKASH_EXECUTE_PAYMENT_URI
 
-	executePayment := u.String()
+	executePayment := b.uri(bkashExecutePaymentUri)
 
 	jsonData, err := json.Marshal(request)
 	if err != nil {
@@ -505,7 +468,7 @@ func (b *Bkash) ExecutePayment(request *models.ExecutePaymentRequest, token *mod
 		// if complete return success payload (*models.ExecutePaymentResponse, nil)
 		// if initiated - return something that should be handled by client (maybe return some kind of timeout error)
 		if errors.Is(err, context.DeadlineExceeded) {
-			queryResp, err := b.QueryPayment(&models.QueryPaymentRequest{PaymentID: request.PaymentID}, token)
+			queryResp, err := b.QueryPayment(&models.QueryPaymentRequest{PaymentID: request.PaymentID})
 			if err != nil {
 				return nil, err
 			}
@@ -529,7 +492,7 @@ func (b *Bkash) ExecutePayment(request *models.ExecutePaymentRequest, token *mod
 					//AgreementStatus:       "",
 				}, nil
 			} else {
-				return nil, TIMEOUT_ERROR
+				return nil, timeoutError
 			}
 		} else {
 			return nil, err
@@ -550,23 +513,18 @@ func (b *Bkash) ExecutePayment(request *models.ExecutePaymentRequest, token *mod
 	return &resp, nil
 }
 
-func (b *Bkash) QueryPayment(request *models.QueryPaymentRequest, token *models.Token) (*models.QueryPaymentResponse, error) {
+func (b *bkash) QueryPayment(request *models.QueryPaymentRequest) (*models.QueryPaymentResponse, error) {
 	// Mandatory field validation
-	if b.AppKey == "" || token.IdToken == "" || request.PaymentID == "" {
-		return nil, EMPTY_REQUIRED_FIELD
+	if b.AppKey == "" || request.PaymentID == "" {
+		return nil, emptyRequiredField
 	}
 
-	var storeUrl string
-	if b.isLiveStore {
-		storeUrl = BKASH_LIVE_GATEWAY
-	} else {
-		storeUrl = BKASH_SANDBOX_GATEWAY
+	token, err := b.getToken()
+	if err != nil {
+		return nil, err
 	}
-	u, _ := url.ParseRequestURI(storeUrl)
-	u.Path += BKASH_QUERY_PAYMENT_URI
-	//u.RawQuery = data.Encode()
 
-	queryPaymentURL := u.String()
+	queryPaymentURL := b.uri(bkashQueryPaymentUri)
 
 	jsonData, err := json.Marshal(request)
 	if err != nil {
@@ -603,6 +561,63 @@ func (b *Bkash) QueryPayment(request *models.QueryPaymentRequest, token *models.
 	return &resp, nil
 }
 
+func (b *bkash) RefundTransaction(request *models.RefundTransactionRequest) (*models.RefundTransactionResponse, error) {
+	// Mandatory field validation
+	if b.AppKey == "" || request.PaymentID == "" {
+		return nil, emptyRequiredField
+	}
+
+	token, err := b.getToken()
+	if err != nil {
+		return nil, err
+	}
+
+	executePayment := b.uri(bkashRefundPaymentUri)
+
+	jsonData, err := json.Marshal(request)
+	if err != nil {
+		return nil, err
+	}
+
+	client := &http.Client{}
+	r, err := http.NewRequest("POST", executePayment, bytes.NewReader(jsonData))
+	if err != nil {
+		return nil, err
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), time.Second*30)
+	defer cancel()
+
+	r = r.WithContext(ctx)
+
+	r.Header.Add("Content-Type", "application/json")
+	r.Header.Add("Content-Length", strconv.Itoa(len(jsonData)))
+	r.Header.Add("Authorization", fmt.Sprintf("%s %s", token.TokenType, token.IdToken))
+	r.Header.Add("X-APP-Key", b.AppKey)
+
+	response, err := client.Do(r)
+	if err != nil {
+		return nil, err
+	}
+
+	body, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var resp models.RefundTransactionResponse
+	err = json.Unmarshal(body, &resp)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode != "0000" {
+		return nil, errors.New(fmt.Sprintf("refund initiation failed, status: %s, reason: %s", resp.StatusCode, resp.StatusMessage))
+	}
+
+	return &resp, nil
+}
+
 // getMessageBytesToSign returns a byte array containing a signature usable for signature verification
 func getMessageBytesToSign(msg *models.BkashIPNPayload) []byte {
 	var builtSignature bytes.Buffer
@@ -621,7 +636,7 @@ func getMessageBytesToSign(msg *models.BkashIPNPayload) []byte {
 
 // IsMessageSignatureValid validates bkash IPN message signature. Returns true, nil if ok,
 // otherwise returns false, error
-func (b *Bkash) IsMessageSignatureValid(msg *models.BkashIPNPayload) error {
+func (b *bkash) IsMessageSignatureValid(msg *models.BkashIPNPayload) error {
 	var cert *x509.Certificate
 	if iFace, found := b.cache.Get(msg.SigningCertURL); found {
 		if crt, ok := iFace.(*x509.Certificate); ok {
@@ -662,4 +677,18 @@ func (b *Bkash) IsMessageSignatureValid(msg *models.BkashIPNPayload) error {
 	}
 
 	return nil
+}
+
+func (b *bkash) uri(path string) string {
+	var storeUrl string
+	if b.isLiveStore {
+		storeUrl = bkashLiveGateway
+	} else {
+		storeUrl = bkashSandboxGateway
+	}
+
+	u, _ := url.ParseRequestURI(storeUrl)
+	u.Path += path
+
+	return u.String()
 }
