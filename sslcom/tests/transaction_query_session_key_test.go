@@ -1,8 +1,8 @@
 package tests
 
 import (
-	"github.com/sh0umik/bd-payment-gateway/sslcom"
-	models2 "github.com/sh0umik/bd-payment-gateway/sslcom/models"
+	"github.com/ShikhoTech/bd-payment-gateway/sslcom"
+	models2 "github.com/ShikhoTech/bd-payment-gateway/sslcom/models"
 	"os"
 	"testing"
 )

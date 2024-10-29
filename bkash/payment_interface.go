@@ -1,7 +1,7 @@
 package bkash
 
 import (
-	"github.com/sh0umik/bd-payment-gateway/bkash/models"
+	"github.com/ShikhoTech/bd-payment-gateway/bkash/models"
 	"net/http"
 )
 

@@ -1,4 +1,4 @@
-module github.com/sh0umik/bd-payment-gateway
+module github.com/ShikhoTech/bd-payment-gateway
 
 go 1.15
 
