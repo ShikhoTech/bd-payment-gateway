@@ -1,7 +1,7 @@
 package sslcom
 
 import (
-	"github.com/ShikhoTech/bd-payment-gateway/sslcom/models"
+	"github.com/ShikhoTech/bd-payment-gateway/v2/sslcom/models"
 	"net/http"
 )
 

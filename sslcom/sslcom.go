@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/ShikhoTech/bd-payment-gateway/sslcom/models"
+	"github.com/ShikhoTech/bd-payment-gateway/v2/sslcom/models"
 	"io/ioutil"
 	"net/http"
 	"net/url"
