@@ -1,5 +1,7 @@
 package models
 
+import "time"
+
 // Response models for TOKENIZED CHECKOUT
 
 type BkashError struct {
@@ -14,6 +16,9 @@ type Token struct {
 	RefreshToken  string `json:"refresh_token,omitempty"`
 	StatusCode    string `json:"statusCode,omitempty"`
 	StatusMessage string `json:"statusMessage,omitempty"`
+
+	ExpiresInTime time.Time `json:"expires_in_time,omitempty"`
+	CreatedAt     time.Time `json:"created_at,omitempty"`
 }
 
 type CreateAgreementResponse struct {
