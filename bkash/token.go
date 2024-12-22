@@ -86,7 +86,7 @@ func (r *redisTokenizer) GetToken() (*models.Token, error) {
 	if token == nil ||
 		token.ExpiresAt.Before(time.Now().UTC()) ||
 		(token.ExpiresAt.Before(time.Now().UTC().Add(15*time.Minute)) && rand.Intn(100) < 10) {
-		token, err = r.getTokenFromAPIMock()
+		token, err = r.getTokenFromAPI()
 		if err != nil {
 			return nil, err
 		}

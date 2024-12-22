@@ -12,7 +12,6 @@ import (
 	"github.com/ShikhoTech/bd-payment-gateway/v2/bkash/models"
 	goCache "github.com/patrickmn/go-cache"
 	"github.com/redis/go-redis/v9"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -133,7 +132,7 @@ func (b *Bkash) CreateAgreement(request *models.CreateAgreementRequest) (*models
 
 	client := &http.Client{}
 
-	r, err := b.newAuthorizedHttpPostRequest(u, bytes.NewReader(jsonData))
+	r, err := b.newAuthorizedHttpPostRequest(u, jsonData)
 	if err != nil {
 		return nil, err
 	}
@@ -172,7 +171,7 @@ func (b *Bkash) CreateAgreementValidationListener(r *http.Request) (*models.Crea
 	return &agreementTValidationResponse, nil
 }
 
-func (b *Bkash) ExecuteAgreement(request *models.ExecuteAgreementRequest, ) (*models.ExecuteAgreementResponse, error) {
+func (b *Bkash) ExecuteAgreement(request *models.ExecuteAgreementRequest) (*models.ExecuteAgreementResponse, error) {
 	// Mandatory field validation
 	if request.PaymentID == "" {
 		return nil, EMPTY_REQUIRED_FIELD
@@ -187,7 +186,7 @@ func (b *Bkash) ExecuteAgreement(request *models.ExecuteAgreementRequest, ) (*mo
 	}
 
 	client := &http.Client{}
-	r, err := b.newAuthorizedHttpPostRequest(u, bytes.NewReader(jsonData))
+	r, err := b.newAuthorizedHttpPostRequest(u, jsonData)
 	if err != nil {
 		return nil, err
 	}
@@ -211,7 +210,7 @@ func (b *Bkash) ExecuteAgreement(request *models.ExecuteAgreementRequest, ) (*mo
 	return &resp, nil
 }
 
-func (b *Bkash) QueryAgreement(request *models.QueryAgreementRequest, ) (*models.QueryAgreementResponse, error) {
+func (b *Bkash) QueryAgreement(request *models.QueryAgreementRequest) (*models.QueryAgreementResponse, error) {
 	// Mandatory field validation
 	if request.AgreementID == "" {
 		return nil, EMPTY_REQUIRED_FIELD
@@ -227,7 +226,7 @@ func (b *Bkash) QueryAgreement(request *models.QueryAgreementRequest, ) (*models
 
 	client := &http.Client{}
 
-	r, err := b.newAuthorizedHttpPostRequest(u, bytes.NewReader(jsonData))
+	r, err := b.newAuthorizedHttpPostRequest(u, jsonData)
 	if err != nil {
 		return nil, err
 	}
@@ -267,7 +266,7 @@ func (b *Bkash) CancelAgreement(request *models.CancelAgreementRequest) (*models
 
 	client := &http.Client{}
 
-	r, err := b.newAuthorizedHttpPostRequest(u, bytes.NewReader(jsonData))
+	r, err := b.newAuthorizedHttpPostRequest(u, jsonData)
 	if err != nil {
 		return nil, err
 	}
@@ -312,7 +311,7 @@ func (b *Bkash) CreatePayment(request *models.CreatePaymentRequest) (*models.Cre
 
 	client := &http.Client{}
 
-	r, err := b.newAuthorizedHttpPostRequest(u, bytes.NewReader(jsonData))
+	r, err := b.newAuthorizedHttpPostRequest(u, jsonData)
 	if err != nil {
 		return nil, err
 	}
@@ -352,7 +351,7 @@ func (b *Bkash) ExecutePayment(request *models.ExecutePaymentRequest) (*models.E
 
 	client := &http.Client{}
 
-	r, err := b.newAuthorizedHttpPostRequest(u, bytes.NewReader(jsonData))
+	r, err := b.newAuthorizedHttpPostRequest(u, jsonData)
 	if err != nil {
 		return nil, err
 	}
@@ -428,7 +427,7 @@ func (b *Bkash) QueryPayment(request *models.QueryPaymentRequest) (*models.Query
 	}
 
 	client := &http.Client{}
-	r, err := b.newAuthorizedHttpPostRequest(u, bytes.NewReader(jsonData))
+	r, err := b.newAuthorizedHttpPostRequest(u, jsonData)
 	if err != nil {
 		return nil, err
 	}
@@ -513,8 +512,8 @@ func (b *Bkash) IsMessageSignatureValid(msg *models.BkashIPNPayload) error {
 	return nil
 }
 
-func (b *Bkash) newAuthorizedHttpPostRequest(url *url.URL, body io.Reader) (*http.Request, error) {
-	r, err := http.NewRequest("POST", url.String(), body)
+func (b *Bkash) newAuthorizedHttpPostRequest(url *url.URL, body []byte) (*http.Request, error) {
+	r, err := http.NewRequest("POST", url.String(), bytes.NewReader(body))
 	if err != nil {
 		return nil, err
 	}
@@ -526,6 +525,7 @@ func (b *Bkash) newAuthorizedHttpPostRequest(url *url.URL, body io.Reader) (*htt
 	}
 
 	r.Header.Add("Content-Type", "application/json")
+	r.Header.Add("Content-Length", fmt.Sprintf("%d", len(body)))
 	r.Header.Add("Authorization", fmt.Sprintf("%s %s", token.TokenType, token.IdToken))
 	r.Header.Add("X-APP-Key", b.config.AppKey)
 
