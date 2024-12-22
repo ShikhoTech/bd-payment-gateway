@@ -36,10 +36,11 @@ var EMPTY_REQUIRED_FIELD = errors.New("empty required field")
 var TIMEOUT_ERROR = errors.New("api request timeout")
 
 type Config struct {
-	Username  string
-	Password  string
-	AppKey    string
-	AppSecret string
+	Username    string
+	Password    string
+	AppKey      string
+	AppSecret   string
+	TokenPrefix string
 
 	RedisHost     string
 	RedisPort     string
@@ -98,7 +99,7 @@ func GetBkash(config Config) (BkashTokenizedCheckoutService, error) {
 		return nil, fmt.Errorf("could not connect to redis: %v", err)
 	}
 
-	t := NewRedisTokenizer(config.Username, config.Password, config.AppKey, config.AppSecret, config.IsLiveStore, redisClient)
+	t := newRedisTokenizer(config.Username, config.Password, config.AppKey, config.AppSecret, config.TokenPrefix, config.IsLiveStore, redisClient)
 
 	// set store url
 	var storeUrl string

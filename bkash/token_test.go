@@ -9,11 +9,12 @@ import (
 func TestRedisTokenizer_GetToken(t *testing.T) {
 	rClient := redis.NewClient(&redis.Options{Addr: "localhost:6379", Password: "", DB: 0})
 
-	tokenizer := NewRedisTokenizer(
+	tokenizer := newRedisTokenizer(
 		"uname",
 		"pass",
 		"",
 		"",
+		"develop",
 		false,
 		rClient,
 	)

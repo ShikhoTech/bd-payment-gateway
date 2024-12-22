@@ -20,17 +20,24 @@ type tokenizer interface {
 }
 
 type redisTokenizer struct {
-	Username  string
-	Password  string
-	AppKey    string
-	AppSecret string
-
 	isLiveStore bool
+
+	Username    string
+	Password    string
+	AppKey      string
+	AppSecret   string
+	tokenPrefix string
 
 	redisClient *redis.Client
 }
 
-func NewRedisTokenizer(username, password, appKey, appSecret string, isLiveStore bool, redisClient *redis.Client) tokenizer {
+func newRedisTokenizer(username, password, appKey, appSecret, tokenPrefix string, isLiveStore bool, redisClient *redis.Client) tokenizer {
+	if tokenPrefix == "" {
+		tokenPrefix = "develop"
+	}
+
+	tokenPrefix = tokenPrefix + "_" + "service.bkash.token"
+
 	return &redisTokenizer{
 		Username:    username,
 		Password:    password,
@@ -38,12 +45,13 @@ func NewRedisTokenizer(username, password, appKey, appSecret string, isLiveStore
 		AppSecret:   appSecret,
 		isLiveStore: isLiveStore,
 		redisClient: redisClient,
+		tokenPrefix: tokenPrefix,
 	}
 }
 
 func (r *redisTokenizer) getTokenFromRedis() (*models.Token, error) {
 	token := &models.Token{}
-	err := r.redisClient.Get(context.Background(), "token_key").Scan(token)
+	err := r.redisClient.Get(context.Background(), r.tokenPrefix).Scan(token)
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +59,7 @@ func (r *redisTokenizer) getTokenFromRedis() (*models.Token, error) {
 }
 
 func (r *redisTokenizer) storeTokenInRedis(token *models.Token) error {
-	err := r.redisClient.Set(context.Background(), "token_key", token, time.Duration(token.ExpiresIn)*time.Second).Err()
+	err := r.redisClient.Set(context.Background(), r.tokenPrefix, token, time.Duration(token.ExpiresIn)*time.Second).Err()
 	if err != nil {
 		return err
 	}
