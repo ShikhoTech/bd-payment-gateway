@@ -1,7 +1,7 @@
 package sslcom
 
 import (
-	"github.com/ShikhoTech/bd-payment-gateway/sslcom/models"
+	"github.com/ShikhoTech/bd-payment-gateway/v2/sslcom/models"
 	"net/http"
 )
 
@@ -22,6 +22,6 @@ type PaymentService interface {
 	// Transaction query by Transaction ID
 	TransactionQueryByTID(request *models.TransactionQueryRequest) (*models.TransactionQueryResponseTID, error)
 
-	//Transaction query by Session Key
+	// Transaction query by Session Key
 	TransactionQueryBySID(request *models.TransactionQueryRequest) (*models.TransactionQueryResponseSID, error)
 }

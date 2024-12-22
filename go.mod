@@ -1,4 +1,4 @@
-module github.com/ShikhoTech/bd-payment-gateway
+module github.com/ShikhoTech/bd-payment-gateway/v2
 
 go 1.15
 

@@ -9,7 +9,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"github.com/ShikhoTech/bd-payment-gateway/bkash/models"
+	"github.com/ShikhoTech/bd-payment-gateway/v2/bkash/models"
 	goCache "github.com/patrickmn/go-cache"
 	"github.com/redis/go-redis/v9"
 	"io"

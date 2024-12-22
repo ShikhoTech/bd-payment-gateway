@@ -2,8 +2,8 @@ package tests
 
 import (
 	"encoding/json"
-	"github.com/ShikhoTech/bd-payment-gateway/bkash"
-	"github.com/ShikhoTech/bd-payment-gateway/bkash/models"
+	"github.com/ShikhoTech/bd-payment-gateway/v2/bkash"
+	"github.com/ShikhoTech/bd-payment-gateway/v2/bkash/models"
 	"testing"
 )
 

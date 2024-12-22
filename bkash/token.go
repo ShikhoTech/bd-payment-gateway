@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"github.com/ShikhoTech/bd-payment-gateway/bkash/models"
+	"github.com/ShikhoTech/bd-payment-gateway/v2/bkash/models"
 	"github.com/redis/go-redis/v9"
 	"io/ioutil"
 	"log"

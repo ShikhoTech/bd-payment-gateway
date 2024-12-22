@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/ShikhoTech/bd-payment-gateway/sslcom/models"
+	"github.com/ShikhoTech/bd-payment-gateway/v2/sslcom/models"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -64,7 +64,7 @@ func (s *SslCommerz) CreateSession(req *models.RequestValue) (*models.SessionRes
 	data.Set("ship_state", req.ShipState)
 	data.Set("ship_postcode", req.ShipPostCode)
 	data.Set("ship_country", req.ShipCountry)
-	data.Set("multi_card_name", strings.Join(req.MultiCardName, ",")) //8
+	data.Set("multi_card_name", strings.Join(req.MultiCardName, ",")) // 8
 	data.Set("value_a", req.ValueA)
 	data.Set("value_b", req.ValueB)
 	data.Set("value_c", req.ValueC)
@@ -82,7 +82,7 @@ func (s *SslCommerz) CreateSession(req *models.RequestValue) (*models.SessionRes
 	}
 	u, _ := url.ParseRequestURI(storeUrl)
 	u.Path = SESSION_URI
-	//u.RawQuery = data.Encode()
+	// u.RawQuery = data.Encode()
 
 	sessionURL := u.String()
 
@@ -423,8 +423,8 @@ func (s *SslCommerz) TransactionQueryBySID(request *models.TransactionQueryReque
 	data.Set("sessionkey", request.SessionKey)
 	data.Set("store_id", s.StoreId)
 	data.Set("store_passwd", s.StorePass)
-	//data.Set("v", request.V)
-	//data.Set("format", request.Format)
+	// data.Set("v", request.V)
+	// data.Set("format", request.Format)
 
 	var storeUrl string
 	if s.isLiveStore {
