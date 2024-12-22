@@ -1,5 +1,10 @@
 package models
 
+import (
+	"encoding/json"
+	"time"
+)
+
 // Response models for TOKENIZED CHECKOUT
 
 type BkashError struct {
@@ -8,12 +13,22 @@ type BkashError struct {
 }
 
 type Token struct {
-	TokenType     string `json:"token_type,omitempty"`
-	ExpiresIn     int    `json:"expires_in,omitempty"`
-	IdToken       string `json:"id_token,omitempty"`
-	RefreshToken  string `json:"refresh_token,omitempty"`
-	StatusCode    string `json:"statusCode,omitempty"`
-	StatusMessage string `json:"statusMessage,omitempty"`
+	TokenType     string    `json:"token_type,omitempty"`
+	ExpiresIn     int       `json:"expires_in,omitempty"`
+	IdToken       string    `json:"id_token,omitempty"`
+	RefreshToken  string    `json:"refresh_token,omitempty"`
+	StatusCode    string    `json:"statusCode,omitempty"`
+	StatusMessage string    `json:"statusMessage,omitempty"`
+	CreatedAt     time.Time `json:"created_at,omitempty"`
+	ExpiresAt     time.Time `json:"expires_at,omitempty"`
+}
+
+func (t *Token) MarshalBinary() ([]byte, error) {
+	return json.Marshal(t)
+}
+
+func (t *Token) UnmarshalBinary(data []byte) error {
+	return json.Unmarshal(data, t)
 }
 
 type CreateAgreementResponse struct {
