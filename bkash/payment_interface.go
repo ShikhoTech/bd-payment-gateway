@@ -5,6 +5,12 @@ import (
 	"net/http"
 )
 
+const (
+	StatusSuccessful = "Successful"
+	StatusFailure    = "failure"
+	StatusCancel     = "cancel"
+)
+
 type BkashTokenizedCheckoutService interface {
 	// CreateAgreement Initiates an agreement request for a customer.
 	CreateAgreement(request *models.CreateAgreementRequest) (*models.CreateAgreementResponse, error)
