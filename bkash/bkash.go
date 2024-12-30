@@ -293,13 +293,14 @@ func (b *Bkash) CancelAgreement(request *models.CancelAgreementRequest) (*models
 
 func (b *Bkash) CreatePayment(request *models.CreatePaymentRequest) (*models.CreatePaymentResponse, error) {
 	// Mandatory field validation
-	if request.Mode == "" || request.CallbackURL == "" {
+	if request.CallbackURL == "" {
 		return nil, EMPTY_REQUIRED_FIELD
 	}
 
-	// Mode validation
-	if request.Mode != "0001" && request.Mode != "0011" {
-		return nil, errors.New("invalid mode value")
+	if request.AgreementID != "" {
+		request.Mode = "0001" // tokenized checkout mode
+	} else {
+		request.Mode = "0011" // direct payment mode
 	}
 
 	u, _ := url.ParseRequestURI(b.storeUrl)
