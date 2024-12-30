@@ -30,6 +30,7 @@ const BKASH_CANCEL_AGREEMENT_URI = "/tokenized/checkout/agreement/cancel"
 const BKASH_CREATE_PAYMENT_URI = "/tokenized/checkout/create"
 const BKASH_EXECUTE_PAYMENT_URI = "/tokenized/checkout/execute"
 const BKASH_QUERY_PAYMENT_URI = "/tokenized/checkout/payment/status"
+const BKASH_REFUND_PAYMENT_URI = "/tokenized/checkout/payment/refund"
 
 var EMPTY_REQUIRED_FIELD = errors.New("empty required field")
 var TIMEOUT_ERROR = errors.New("api request timeout")
@@ -446,6 +447,49 @@ func (b *Bkash) QueryPayment(request *models.QueryPaymentRequest) (*models.Query
 	err = json.Unmarshal(body, &resp)
 	if err != nil {
 		return nil, err
+	}
+
+	return &resp, nil
+}
+
+func (b *Bkash) RefundTransaction(request *models.RefundTransactionRequest) (*models.RefundTransactionResponse, error) {
+	// Mandatory field validation
+	if request.PaymentID == "" {
+		return nil, EMPTY_REQUIRED_FIELD
+	}
+
+	u, _ := url.ParseRequestURI(b.storeUrl)
+	u.Path += BKASH_REFUND_PAYMENT_URI
+
+	jsonData, err := json.Marshal(request)
+	if err != nil {
+		return nil, err
+	}
+
+	client := &http.Client{}
+	r, err := b.newAuthorizedHttpPostRequest(u, jsonData)
+	if err != nil {
+		return nil, err
+	}
+
+	response, err := client.Do(r)
+	if err != nil {
+		return nil, err
+	}
+
+	body, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var resp models.RefundTransactionResponse
+	err = json.Unmarshal(body, &resp)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode != "0000" {
+		return nil, errors.New(fmt.Sprintf("refund initiation failed, status: %s, reason: %s", resp.StatusCode, resp.StatusMessage))
 	}
 
 	return &resp, nil
