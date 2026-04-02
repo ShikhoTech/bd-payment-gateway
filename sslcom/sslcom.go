@@ -15,6 +15,7 @@ import (
 const SANDBOX_GATEWAY = "https://sandbox.sslcommerz.com"
 const LIVE_GATEWAY = "https://securepay.sslcommerz.com"
 const SESSION_URI = "gwprocess/v3/api.php"
+const SESSION_URI_V4 = "gwprocess/v4/api.php"
 const ORDER_VALIDATION_URI = "validator/api/validationserverAPI.php"
 const TRANSACTION_QUERY_URI_TID = "validator/api/merchantTransIDvalidationAPI.php"
 const TRANSACTION_QUERY_URI_SK = "validator/api/merchantTransIDvalidationAPI.php"
@@ -25,13 +26,26 @@ type SslCommerz struct {
 	StoreId   string
 
 	isLiveStore bool
+	sessionURI  string
 }
 
+// GetSslCommerz creates an SslCommerz instance using gwprocess/v3/api.php
 func GetSslCommerz(storeID string, storePass string, isLiveStore bool) *SslCommerz {
 	return &SslCommerz{
 		StoreId:     storeID,
 		StorePass:   storePass,
 		isLiveStore: isLiveStore,
+		sessionURI:  SESSION_URI,
+	}
+}
+
+// GetSslCommerzV4 creates an SslCommerz instance using gwprocess/v4/api.php
+func GetSslCommerzV4(storeID string, storePass string, isLiveStore bool) *SslCommerz {
+	return &SslCommerz{
+		StoreId:     storeID,
+		StorePass:   storePass,
+		isLiveStore: isLiveStore,
+		sessionURI:  SESSION_URI_V4,
 	}
 }
 
@@ -81,8 +95,8 @@ func (s *SslCommerz) CreateSession(req *models.RequestValue) (*models.SessionRes
 		storeUrl = SANDBOX_GATEWAY
 	}
 	u, _ := url.ParseRequestURI(storeUrl)
-	u.Path = SESSION_URI
-	// u.RawQuery = data.Encode()
+	u.Path = s.sessionURI
+	//u.RawQuery = data.Encode()
 
 	sessionURL := u.String()
 
